@@ -1,0 +1,114 @@
+////////////////////////////////////////////////////////
+// Installation guide for Caffe on Ubuntu 16.04.3 LTS //
+////////////////////////////////////////////////////////
+
+sudo apt-get update
+
+sudo apt-get upgrade
+
+sudo apt-get install -y build-essential cmake git pkg-config
+
+sudo apt-get install -y libprotobuf-dev libleveldb-dev libsnappy-dev libhdf5-serial-dev libhdf5-tools protobuf-compiler
+
+sudo apt-get install -y libatlas-base-dev 
+
+sudo apt-get install -y --no-install-recommends libboost-all-dev
+
+sudo apt-get install -y libgflags-dev libgoogle-glog-dev liblmdb-de
+
+sudo apt-get install -y python-dev python-pip
+
+
+
+// Create a directory where you would like to install caffe. I'd like to install to /opt/caffe/
+
+sudo mkdir /opt/caffe/
+
+sudo git clone https://github.com/BVLC/caffe.git
+
+cd caffe
+
+sudo cp Makefile.config.example Makefile.config
+
+
+
+// Feel free to edit Makefile.config for your needs. Important parameters for us are:
+
+# CPU-only switch (uncomment to build without GPU support).
+CPU_ONLY := 1
+
+# We need to be able to find Python.h and numpy/arrayobject.h.
+PYTHON_INCLUDE := /usr/include/python2.7 \
+                  /usr/local/lib/python2.7/dist-packages/numpy/core/include
+
+# We need to be able to find libpythonX.X.so or .dylib.
+PYTHON_LIB := /usr/lib
+
+# Whatever else you find you need goes here. So we added HDF5 directory to avoid some possible problems in the future.
+INCLUDE_DIRS := $(PYTHON_INCLUDE) /usr/local/include \
+                                  /usr/include/hdf5/serial
+LIBRARY_DIRS := $(PYTHON_LIB) /usr/local/lib /usr/lib
+
+
+
+// You are ready to compile. Let's do it!
+// Note: if you get errors like "file or directory not found" caused by HDF5 then you need to do the following:
+	sudo ln -s libhdf5_serial.so.10.1.0 libhdf5.so
+	sudo ln -s libhdf5_serial_hl.so.10.0.2 libhdf5_hl.so
+
+sudo make clean
+
+sudo make all
+
+sudo make test
+
+sudo make runtest
+
+cd /opt/caffe/python
+
+for req in $(cat requirements.txt); do pip install $req; done
+
+//In case of any problems, try:
+	for req in $(cat requirements.txt); do sudo -H pip install $req --upgrade; done
+
+cd /opt/caffe
+
+sudo make pycaffe
+
+// Edit ~/.bashrc by adding the following lines to the end of the file, save it and reboot
+	export PYTHONPATH=/opt/caffe/python:$PYTHONPATH
+	export CAFFE_ROOT=/opt/caffe/
+
+cd /opt/caffe/python
+
+python
+
+>>> import caffe
+
+// If you get no errors then you are fine. Congratulations! Now you can run examples.
+
+
+
+//MNIST example
+
+cd $CAFFE_ROOT
+
+sudo ./data/mnist/get_mnist.sh
+
+sudo ./examples/mnist/create_mnist.sh
+
+// Edit $CAFFE_ROOT/examples/mnist/lenet_solver.prototxt for cpu-mode
+	# solver mode: CPU or GPU
+	solver_mode: CPU
+
+cd $CAFFE_ROOT
+
+sudo ./examples/mnist/train_lenet.sh
+
+// Wait until you see something like that:
+	I1126 13:19:55.350512  2936 solver.cpp:397]     Test net output #0: accuracy = 0.9899
+	I1126 13:19:55.350591  2936 solver.cpp:397]     Test net output #1: loss = 0.0305436 (* 1 = 0.0305436 loss)
+	I1126 13:19:55.350603  2936 solver.cpp:315] Optimization Done.
+	I1126 13:19:55.350610  2936 caffe.cpp:259] Optimization Done.
+
+// Congratualtions! It works!
